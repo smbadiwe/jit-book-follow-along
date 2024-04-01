@@ -1,5 +1,6 @@
 require_relative './base'
 require_relative '../database/blob'
+require_relative '../database/tree'
 
 module Command
   class Status < Base
@@ -11,8 +12,12 @@ module Command
 
       repo.index.load_for_update
 
+      # scan_workspace
+      # detect_workspace_changes
       scan_workspace
-      detect_workspace_changes
+      load_head_tree
+      check_index_entries
+      collect_deleted_head_files
 
       repo.index.write_updates
 
@@ -41,10 +46,12 @@ module Command
       left = ' '
       left = 'A' if changes.include?(:index_added)
       left = 'M' if changes.include?(:index_modified)
+      left = 'D' if changes.include?(:index_deleted)
 
-      right = ' '
+      right = '' # ' '
       right = 'D' if changes.include?(:workspace_deleted)
       right = 'M' if changes.include?(:workspace_modified)
+
       left + right
     end
 
@@ -54,7 +61,7 @@ module Command
           @stats[path] = stat if stat.file?
           scan_workspace(path) if stat.directory?
         elsif trackable_file?(path, stat)
-        # else
+          # else
           path += File::SEPARATOR if stat.directory?
           @untracked.add(path)
         end
@@ -91,18 +98,16 @@ module Command
 
     def check_index_against_head_tree(entry)
       item = @head_tree[entry.path]
-      return if item
-
-      record_change(entry.path, :index_added)
-    end
-
-    def check_index_against_head_tree(entry)
-      item = @head_tree[entry.path]
       if item
         record_change(entry.path, :index_modified) unless entry.mode == item.mode and entry.oid == item.oid
       else
         record_change(entry.path, :index_added)
       end
+    end
+
+    def check_index_against_workspace(entry)
+      # FIXME: Consider renaming to `check_index_entry` to `check_index_against_workspace` and deleting this function?
+      check_index_entry(entry)
     end
 
     def detect_workspace_changes

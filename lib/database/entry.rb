@@ -1,4 +1,4 @@
-require_relative './tree'
+# require_relative './tree'
 
 class Database
   Entry = Struct.new(:oid, :mode) do

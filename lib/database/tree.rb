@@ -1,4 +1,4 @@
-# require_relative '../../entry'
+require_relative './entry'
 
 class Database
   class Tree
@@ -56,7 +56,7 @@ class Database
         name = scanner.scan_until(/\0/)[0..-2]
         oid = scanner.peek(20).unpack1('H40')
         scanner.pos += 20
-        entries[name] = Entry.new(oid, mode)
+        entries[name] = Database::Entry.new(oid, mode)
       end
       Tree.new(entries)
     end

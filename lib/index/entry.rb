@@ -1,4 +1,6 @@
 class Index
+  # REGULAR_MODE = 0100644
+  # EXECUTABLE_MODE = 0100755
   REGULAR_MODE = 0o100644
   EXECUTABLE_MODE = 0o100755
   MAX_PATH_SIZE = 0xfff
@@ -51,7 +53,7 @@ class Index
     end
 
     def stat_match?(stat)
-      size == 0 or size == stat.size
+      mode == Entry.mode_for_stat(stat) and (size == 0 or size == stat.size)
     end
 
     def times_match?(stat)

@@ -1,0 +1,72 @@
+# require_relative '../../entry'
+
+class Database
+  class Tree
+    ENTRY_FORMAT = 'Z*H40'
+    TREE_MODE = 0o40000
+
+    attr_accessor :oid
+    attr_reader :entries
+
+    def initialize(entries = {})
+      @entries = entries
+    end
+
+    def type
+      'tree'
+    end
+
+    def mode
+      TREE_MODE
+    end
+
+    # def mode
+    #   Entry::DIRECTORY_MODE
+    # end
+
+    def add_entry(parents, entry)
+      if parents.empty?
+        @entries[entry.basename] = entry
+      else
+        tree = @entries[parents.first.basename] ||= Tree.new
+        tree.add_entry(parents.drop(1), entry)
+      end
+    end
+
+    def traverse(&block)
+      @entries.each do |_name, entry|
+        entry.traverse(&block) if entry.is_a?(Tree)
+      end
+      block.call(self)
+    end
+
+    def self.build(entries)
+      sorted_entries = entries.sort_by { |entry| entry.key.to_s }
+      root = Tree.new
+      sorted_entries.each do |entry|
+        root.add_entry(entry.parent_directories, entry)
+      end
+      root
+    end
+
+    def self.parse(scanner)
+      entries = {}
+      until scanner.eos?
+        mode = scanner.scan_until(/ /).strip.to_i(8)
+        name = scanner.scan_until(/\0/)[0..-2]
+        oid = scanner.peek(20).unpack1('H40')
+        scanner.pos += 20
+        entries[name] = Entry.new(oid, mode)
+      end
+      Tree.new(entries)
+    end
+
+    def to_s
+      entries = @entries.map do |name, entry|
+        mode = entry.mode.to_s(8)
+        ["#{mode} #{name}", entry.oid].pack(ENTRY_FORMAT)
+      end
+      entries.join('')
+    end
+  end
+end

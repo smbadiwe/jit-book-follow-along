@@ -1,4 +1,5 @@
 require_relative './base'
+require_relative '../sorted_hash'
 require_relative '../database/blob'
 require_relative '../database/tree'
 
@@ -18,8 +19,8 @@ module Command
     def run
       @stats = {}
       @changed = SortedSet.new
-      @index_changes = {}
-      @workspace_changes = {}
+      @index_changes = SortedHash.new
+      @workspace_changes = SortedHash.new
       @untracked_files = SortedSet.new
 
       repo.index.load_for_update
@@ -44,20 +45,20 @@ module Command
     end
 
     def print_long_format
-      print_changes('Changes to be committed', @index_changes)
-      print_changes('Changes not staged for commit', @workspace_changes)
-      print_changes('Untracked files', @untracked_files)
+      print_changes('Changes to be committed', @index_changes, :green)
+      print_changes('Changes not staged for commit', @workspace_changes, :red)
+      print_changes('Untracked files', @untracked_files, :red)
       print_commit_status
     end
 
-    def print_changes(message, changeset)
+    def print_changes(message, changeset, style)
       return if changeset.empty?
 
       puts "#{message}:"
       puts ''
       changeset.each do |path, type|
         status = type ? LONG_STATUS[type].ljust(LABEL_WIDTH, ' ') : ''
-        puts "\t#{status}#{path}"
+        puts "\t" + fmt(style, status + path)
       end
       puts ''
     end
@@ -76,7 +77,7 @@ module Command
       return if @index_changes.any?
 
       if @workspace_changes.any?
-        puts 'no changes added to commit'
+        puts 'no changes added to commit (use "jit add" and/or "jit commit -a")'
       elsif @untracked_files.any?
         puts 'nothing added to commit but untracked files present'
       else

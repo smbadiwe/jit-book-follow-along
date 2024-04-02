@@ -37,9 +37,9 @@ module Command
     end
 
     def print_long_format
-      print_changes('Changes to be committed', @index_changes, :green)
-      print_changes('Changes not staged for commit', @workspace_changes, :red)
-      print_changes('Untracked files', @untracked_files, :red)
+      print_changes('Changes to be committed', @status.index_changes, :green)
+      print_changes('Changes not staged for commit', @status.workspace_changes, :red)
+      print_changes('Untracked files', @status.untracked_files, :red)
       print_commit_status
     end
 
@@ -56,21 +56,21 @@ module Command
     end
 
     def print_porcelain_format # print_results
-      @changed.each do |path|
+      @status.changed.each do |path|
         status = status_for(path)
         puts "#{status} #{path}"
       end
-      @untracked_files.each do |path|
+      @status.untracked_files.each do |path|
         puts "?? #{path}"
       end
     end
 
     def print_commit_status
-      return if @index_changes.any?
+      return if @status.index_changes.any?
 
-      if @workspace_changes.any?
+      if @status.workspace_changes.any?
         puts 'no changes added to commit (use "jit add" and/or "jit commit -a")'
-      elsif @untracked_files.any?
+      elsif @status.untracked_files.any?
         puts 'nothing added to commit but untracked files present'
       else
         puts 'nothing to commit, working tree clean'
@@ -78,8 +78,8 @@ module Command
     end
 
     def status_for(path)
-      left = SHORT_STATUS.fetch(@index_changes[path], ' ')
-      right = SHORT_STATUS.fetch(@workspace_changes[path], '') # , ' '
+      left = SHORT_STATUS.fetch(@status.index_changes[path], ' ')
+      right = SHORT_STATUS.fetch(@status.workspace_changes[path], '') # , ' '
       left + right
     end
   end

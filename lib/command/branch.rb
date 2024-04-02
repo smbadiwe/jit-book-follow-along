@@ -1,3 +1,5 @@
+require_relative '../revision'
+
 module Command
   class Branch < Base
     def run

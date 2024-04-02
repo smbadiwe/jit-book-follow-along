@@ -1,3 +1,5 @@
+require_relative './inspector'
+
 class Repository
   class Status
     attr_reader :changed,

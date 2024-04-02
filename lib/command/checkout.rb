@@ -1,3 +1,5 @@
+require_relative '../repository/migration'
+
 module Command
   class Checkout < Base
     def run
@@ -33,6 +35,7 @@ module Command
     end
 
     def handle_invalid_object(revision, error)
+      repo.index.release_lock
       revision.errors.each do |err|
         @stderr.puts "error: #{err.message}"
         err.hint.each { |line| @stderr.puts "hint: #{line}" }

@@ -1,4 +1,5 @@
 require_relative './command/add'
+require_relative './command/branch'
 require_relative './command/commit'
 require_relative './command/diff'
 require_relative './command/init'
@@ -9,6 +10,7 @@ module Command
   COMMANDS = {
     'init' => Init,
     'add' => Add,
+    'branch' => Branch,
     'commit' => Commit,
     'diff' => Diff,
     'status' => Status

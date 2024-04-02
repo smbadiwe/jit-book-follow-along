@@ -2,10 +2,10 @@ require 'digest/sha1'
 require 'strscan'
 require 'zlib'
 
-# require_relative './database/author'
 require_relative './database/blob'
 require_relative './database/commit'
 require_relative './database/tree'
+require_relative './database/tree_diff'
 
 TEMP_CHARS = ('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a
 TYPES = {
@@ -47,6 +47,22 @@ class Database
 
   def hash_object(object)
     hash_content(serialize_object(object))
+  end
+
+  def prefix_match(name)
+    dirname = object_path(name).dirname
+    oids = Dir.entries(dirname).map do |filename|
+      "#{dirname.basename}#{filename}"
+    end
+    oids.select { |oid| oid.start_with?(name) }
+  rescue Errno::ENOENT
+    []
+  end
+
+  def tree_diff(a, b)
+    diff = TreeDiff.new(self)
+    diff.compare_oids(a, b)
+    diff.changes
   end
 
   private

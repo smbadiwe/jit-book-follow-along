@@ -28,4 +28,21 @@ class Repository
   def status
     Status.new(self)
   end
+
+  def migration(tree_diff)
+    Migration.new(self, tree_diff)
+  end
+
+  def trackable_file?(path, stat)
+    return false unless stat
+    return !index.tracked?(path) if stat.file?
+    return false unless stat.directory?
+
+    items = workspace.list_dir(path)
+    files = items.select { |_, item_stat| item_stat.file? }
+    dirs = items.select { |_, item_stat| item_stat.directory? }
+    [files, dirs].any? do |list|
+      list.any? { |item_path, item_stat| trackable_file?(item_path, item_stat) }
+    end
+  end
 end

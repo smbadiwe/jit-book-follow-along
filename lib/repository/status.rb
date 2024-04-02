@@ -8,6 +8,7 @@ class Repository
                 :untracked_files
 
     def initialize(repository)
+      @inspector = Inspector.new(repository)
       @repo = repository
       @stats = {}
       @changed = SortedSet.new
@@ -41,6 +42,10 @@ class Repository
       end
     end
 
+    def trackable_file?(path, stat)
+      @repo.trackable_file?(path, stat)
+    end
+
     def check_index_entries
       @repo.index.each_entry do |entry|
         check_index_against_workspace(entry)
@@ -50,11 +55,10 @@ class Repository
 
     def check_index_against_head_tree(entry)
       item = @head_tree[entry.path]
-      if item
-        record_change(entry.path, @index_changes, :modified) unless entry.mode == item.mode and entry.oid == item.oid
-      else
-        record_change(entry.path, @index_changes, :added)
-      end
+      status = @inspector.compare_tree_to_index(item, entry)
+      return unless status
+
+      record_change(entry.path, @index_changes, status)
     end
 
     def detect_workspace_changes
@@ -68,18 +72,11 @@ class Repository
 
     def check_index_against_workspace(entry)
       stat = @stats[entry.path]
-      return record_change(entry.path, @workspace_changes, :deleted) unless stat
-      return record_change(entry.path, @workspace_changes, :modified) unless entry.stat_match?(stat)
-      return if entry.times_match?(stat) # FIXME: Still needed?
-
-      data = @repo.workspace.read_file(entry.path)
-      blob = Database::Blob.new(data)
-      oid = @repo.database.hash_object(blob)
-
-      if entry.oid == oid
-        @repo.index.update_entry_stat(entry, stat)
+      status = @inspector.compare_index_to_workspace(entry, stat)
+      if status
+        record_change(entry.path, @workspace_changes, status)
       else
-        record_change(entry.path, @workspace_changes, :modified)
+        @repo.index.update_entry_stat(entry, stat)
       end
     end
 
@@ -101,19 +98,6 @@ class Repository
         else
           @head_tree[path.to_s] = entry
         end
-      end
-    end
-
-    def trackable_file?(path, stat)
-      return false unless stat
-      return !@repo.index.tracked?(path) if stat.file?
-      return false unless stat.directory?
-
-      items = @repo.workspace.list_dir(path)
-      files = items.select { |_, item_stat| item_stat.file? }
-      dirs = items.select { |_, item_stat| item_stat.directory? }
-      [files, dirs].any? do |list|
-        list.any? { |item_path, item_stat| trackable_file?(item_path, item_stat) }
       end
     end
   end

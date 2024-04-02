@@ -11,7 +11,7 @@ TEMP_CHARS = ('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a
 TYPES = {
   'blob' => Database::Blob,
   'commit' => Database::Commit,
-  'tree' => Database::Tree,
+  'tree' => Database::Tree
 }
 
 class Database
@@ -29,6 +29,10 @@ class Database
 
   def load(oid)
     @objects[oid] ||= read_object(oid)
+  end
+
+  def short_oid(oid)
+    oid[0..6]
   end
 
   def read_object(oid)

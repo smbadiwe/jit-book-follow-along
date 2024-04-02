@@ -15,12 +15,7 @@ class Index
   ENTRY_MIN_SIZE = 64
 
   def initialize(pathname)
-    # clear
-
-    @entries = {}
-    @keys = SortedSet.new
-    @parents = Hash.new { |hash, key| hash[key] = Set.new }
-    @changed = false
+    clear
 
     @lockfile = Lockfile.new(pathname)
     @pathname = pathname
@@ -31,6 +26,10 @@ class Index
     @keys = SortedSet.new
     @parents = Hash.new { |hash, key| hash[key] = Set.new }
     @changed = false
+  end
+
+  def entry_for_path(path)
+    @entries[path.to_s]
   end
 
   def update_entry_stat(entry, stat)

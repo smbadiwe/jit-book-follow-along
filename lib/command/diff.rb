@@ -5,15 +5,21 @@ module Command
     def run
       repo.index.load
       @status = repo.status
-      
+
       setup_pager
 
-      if @args.first == '--cached'
+      if @options[:cached]
         diff_head_index
       else
         diff_index_workspace
       end
       exit 0
+    end
+
+    def define_options
+      @parser.on '--cached', '--staged' do
+        @options[:cached] = true
+      end
     end
 
     private

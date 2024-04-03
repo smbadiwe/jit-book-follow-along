@@ -1,3 +1,4 @@
+require 'optparse'
 require_relative '../color'
 require_relative '../pager'
 
@@ -41,6 +42,7 @@ module Command
     end
 
     def execute
+      parse_options
       catch(:exit) { run }
 
       return unless defined? @pager
@@ -49,20 +51,29 @@ module Command
       @pager.wait
     end
 
+    def parse_options
+      @options = {}
+      @parser = OptionParser.new
+      define_options
+      @parser.parse!(@args)
+    end
+
+    def define_options; end
+
     def puts(string)
       @stdout.puts(string)
     rescue Errno::EPIPE
       exit 0
     end
 
-    def warn(string)
+    def error(string)
       @stderr.puts(string)
     rescue Errno::EPIPE
       exit 0
     end
 
-    def error(string)
-      warn(string)
+    def warn(string)
+      error(string)
     end
   end
 end

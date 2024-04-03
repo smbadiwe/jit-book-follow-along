@@ -42,20 +42,20 @@ module Command
       repo.index.add(path, blob.oid, stat)
     end
 
-    def handle_locked_index(error)
-      error("fatal: #{error.message}\n")
+    def handle_locked_index(e)
+      error("fatal: #{e.message}\n")
       error(LOCKED_INDEX_MESSAGE)
       exit 128
     end
 
-    def handle_missing_file(error)
-      error("fatal: #{error.message}")
+    def handle_missing_file(e)
+      error("fatal: #{e.message}")
       repo.index.release_lock
       exit 128
     end
 
-    def handle_unreadable_file(error)
-      error("error: #{error.message}")
+    def handle_unreadable_file(e)
+      error("error: #{e.message}")
       error('fatal: adding files failed')
       repo.index.release_lock
       exit 128

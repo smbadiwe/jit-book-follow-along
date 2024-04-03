@@ -21,10 +21,10 @@ module Command
       repo.refs.create_branch(branch_name, start_oid)
     rescue Revision::InvalidObject => e
       revision.errors.each do |err|
-        @stderr.puts "error: #{err.message}"
-        err.hint.each { |line| @stderr.puts "hint: #{line}" }
+        error "error: #{err.message}"
+        err.hint.each { |line| error "hint: #{line}" }
       end
-      @stderr.puts "fatal: #{e.message}"
+      error "fatal: #{e.message}"
       exit 128
     end
   end

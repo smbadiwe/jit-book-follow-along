@@ -61,16 +61,16 @@ module Command
     end
 
     def show_commit(commit)
+      puts "@options[:format] = #{@options[:format]}"
       case @options[:format]
       when 'medium' then show_commit_medium(commit)
       when 'oneline' then show_commit_oneline(commit)
       end
-
       show_patch(commit)
     end
 
     def show_patch(commit)
-      return unless @options[:patch] and commit.parents.size <= 1
+      return unless @options[:patch]  # and commit.parents.size <= 1
 
       diff = @rev_list.tree_diff(commit.parent, commit.oid)
       paths = diff.keys.sort_by(&:to_s)

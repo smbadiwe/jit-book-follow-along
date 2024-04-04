@@ -51,7 +51,7 @@ class RevList
   end
 
   def handle_revision(rev)
-    if @repo.workspace.stat_file?(@repo.git_path.join(rev))
+    if @repo.workspace.stat_file?(rev)
       @prune.push(Pathname.new(rev))
     elsif match = RANGE.match(rev)
       # RANGE supports syntax like jit log topic...master
@@ -134,11 +134,10 @@ class RevList
   end
 
   def simplify_commit(commit)
-    return if @prune.empty?
+    return commit.parents if @prune.empty?
 
     parents = commit.parents
     parents = [nil] if parents.empty?
-
     parents.each do |oid|
       next unless tree_diff(oid, commit.oid).empty?
 

@@ -1,4 +1,6 @@
 require_relative './shared/print_diff'
+require_relative '../revision'
+require_relative '../rev_list'
 
 module Command
   class Log < Base
@@ -8,7 +10,8 @@ module Command
       setup_pager
       @reverse_refs = repo.refs.reverse_refs
       @current_ref = repo.refs.current_ref
-      each_commit { |commit| show_commit(commit) }
+      @rev_list = RevList.new(repo, @args)
+      @rev_list.each { |commit| show_commit(commit) }
       exit 0
     end
 
@@ -128,15 +131,6 @@ module Command
 
     def ref_color(ref)
       ref.head? ? %i[bold cyan] : %i[bold green]
-    end
-
-    def each_commit
-      oid = repo.refs.read_head
-      while oid
-        commit = repo.database.load(oid)
-        yield commit
-        oid = commit.parent
-      end
     end
   end
 end

@@ -14,6 +14,10 @@ class Database
       'commit'
     end
 
+    def date
+      @author.time
+    end
+
     def self.parse(scanner)
       headers = {}
       loop do
@@ -26,7 +30,7 @@ class Database
       Commit.new(
         headers['parent'],
         headers['tree'],
-        Author.parse(headers["author"]),
+        Author.parse(headers['author']),
         scanner.rest
       )
     end

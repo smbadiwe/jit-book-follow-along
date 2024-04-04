@@ -101,9 +101,5 @@ module Command
     def from_nothing(path)
       Target.new(path, NULL_OID, nil, '')
     end
-
-    def short(oid)
-      repo.database.short_oid(oid)
-    end
   end
 end

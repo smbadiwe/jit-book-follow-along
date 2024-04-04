@@ -31,7 +31,7 @@ module Command
     end
 
     def short(oid)
-      oid[0..6]
+      repo.database.short_oid(oid)
     end
 
     def print_diff_mode(a, b)

@@ -78,10 +78,13 @@ class RevList
   end
 
   def mark_parents_uninteresting(commit)
-    while commit&.parent
-      break unless mark(commit.parent, :uninteresting)
+    queue = commit.parents.clone
+    until queue.empty?
+      oid = queue.shift
+      next unless mark(oid, :uninteresting)
 
-      commit = @commits[commit.parent]
+      commit = @commits[oid]
+      queue.concat(commit.parents) if commit
     end
   end
 
@@ -121,19 +124,27 @@ class RevList
   def add_parents(commit)
     return unless mark(commit.oid, :added)
 
-    parent = load_commit(commit.parent)
     if marked?(commit.oid, :uninteresting)
-      mark_parents_uninteresting(parent) if parent
+      parents = commit.parents.map { |oid| load_commit(oid) }
+      parents.each { |parent| mark_parents_uninteresting(parent) }
     else
-      simplify_commit(commit)
+      parents = simplify_commit(commit).map { |oid| load_commit(oid) }
     end
-    enqueue_commit(parent) if parent
+    parents.each { |parent| enqueue_commit(parent) }
   end
 
   def simplify_commit(commit)
     return if @prune.empty?
 
-    mark(commit.oid, :treesame) if tree_diff(commit.parent, commit.oid).empty?
-  end
+    parents = commit.parents
+    parents = [nil] if parents.empty?
 
+    parents.each do |oid|
+      next unless tree_diff(oid, commit.oid).empty?
+
+      mark(commit.oid, :treesame)
+      return [*oid]
+    end
+    commit.parents
+  end
 end

@@ -7,13 +7,13 @@ class Database
       @changes = {}
     end
 
-    def compare_oids(a, b, prefix = Pathname.new(''))
+    def compare_oids(a, b, filter)
       return if a == b
 
       a_entries = a ? oid_to_tree(a).entries : {}
       b_entries = b ? oid_to_tree(b).entries : {}
-      detect_deletions(a_entries, b_entries, prefix)
-      detect_additions(a_entries, b_entries, prefix)
+      detect_deletions(a_entries, b_entries, filter)
+      detect_additions(a_entries, b_entries, filter)
     end
 
     def oid_to_tree(oid)
@@ -24,29 +24,29 @@ class Database
       end
     end
 
-    def detect_deletions(a, b, prefix)
-      a.each do |name, entry|
+    def detect_deletions(a, b, filter)
+      filter.each_entry(a) do |name, entry|
         other = b[name]
         next if entry == other
 
-        path = prefix.join(name)
+        sub_filter = filter.join(name)
         tree_a, tree_b = [entry, other].map { |e| e&.tree? ? e.oid : nil }
-        compare_oids(tree_a, tree_b, path)
+        compare_oids(tree_a, tree_b, sub_filter)
         blobs = [entry, other].map { |e| e&.tree? ? nil : e }
-        @changes[path] = blobs if blobs.any?
+        @changes[sub_filter.path] = blobs if blobs.any?
       end
     end
 
-    def detect_additions(a, b, prefix)
-      b.each do |name, entry|
+    def detect_additions(a, b, filter)
+      filter.each_entry(b) do |name, entry|
         other = a[name]
         next if other
 
-        path = prefix.join(name)
+        sub_filter = filter.join(name)
         if entry.tree?
-          compare_oids(nil, entry.oid, path)
+          compare_oids(nil, entry.oid, sub_filter)
         else
-          @changes[path] = [nil, entry]
+          @changes[sub_filter.path] = [nil, entry]
         end
       end
     end

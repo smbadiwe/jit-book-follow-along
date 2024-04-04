@@ -1,3 +1,6 @@
+require_relative './path_filter'
+require_relative './revision'
+
 class RevList
   def initialize(repo, revs)
     @repo = repo
@@ -6,8 +9,11 @@ class RevList
     @limited = false
     @output = []
     @queue = []
+    @prune = []
+    @diffs = {}
     revs.each { |rev| handle_revision(rev) }
     handle_revision(Revision::HEAD) if @queue.empty?
+    @filter = PathFilter.build(@prune)
   end
 
   def each(&block)
@@ -22,6 +28,11 @@ class RevList
       @output.push(commit) unless marked?(commit.oid, :uninteresting)
     end
     @queue = @output
+  end
+
+  def tree_diff(old_oid, new_oid)
+    key = [old_oid, new_oid]
+    @diffs[key] ||= @repo.database.tree_diff(old_oid, new_oid, @filter)
   end
 
   private
@@ -40,11 +51,9 @@ class RevList
   end
 
   def handle_revision(rev)
-    oid = Revision.new(@repo, rev).resolve(Revision::COMMIT)
-    commit = load_commit(oid)
-    enqueue_commit(commit)
-
-    if match = RANGE.match(rev)
+    if @repo.workspace.stat_file?(@repo.git_path.join(rev))
+      @prune.push(Pathname.new(rev))
+    elsif match = RANGE.match(rev)
       # RANGE supports syntax like jit log topic...master
       set_start_point(match[1], false)
       set_start_point(match[2], true)
@@ -101,7 +110,10 @@ class RevList
     until @queue.empty?
       commit = @queue.shift
       add_parents(commit) unless @limited
+
       next if marked?(commit.oid, :uninteresting)
+      next if marked?(commit.oid, :treesame)
+
       yield commit
     end
   end
@@ -110,9 +122,18 @@ class RevList
     return unless mark(commit.oid, :added)
 
     parent = load_commit(commit.parent)
-    return unless parent
-
-    mark_parents_uninteresting(parent) if marked?(commit.oid, :uninteresting)
-    enqueue_commit(parent)
+    if marked?(commit.oid, :uninteresting)
+      mark_parents_uninteresting(parent) if parent
+    else
+      simplify_commit(commit)
+    end
+    enqueue_commit(parent) if parent
   end
+
+  def simplify_commit(commit)
+    return if @prune.empty?
+
+    mark(commit.oid, :treesame) if tree_diff(commit.parent, commit.oid).empty?
+  end
+
 end

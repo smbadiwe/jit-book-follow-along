@@ -30,6 +30,10 @@ module Command
       puts fmt(:bold, string)
     end
 
+    def short(oid)
+      oid[0..6]
+    end
+
     def print_diff_mode(a, b)
       if a.mode.nil?
         header("new file mode #{b.mode}")

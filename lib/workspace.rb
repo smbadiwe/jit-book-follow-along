@@ -44,6 +44,13 @@ class Workspace
     raise NoPermission, "stat('#{path}'): Permission denied"
   end
 
+  def stat_file?(path)
+    stat_file(path)
+    true
+  rescue
+    false
+  end
+
   def apply_migration(migration)
     apply_change_list(migration, :delete)
     migration.rmdirs.sort.reverse_each { |dir| remove_directory(dir) }

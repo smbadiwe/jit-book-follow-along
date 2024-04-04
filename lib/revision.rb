@@ -30,8 +30,9 @@ class Revision
   }x
   PARENT = /^(.+)\^$/
   ANCESTOR = /^(.+)~(\d+)$/
+  HEAD = 'HEAD'
   REF_ALIASES = {
-    '@' => 'HEAD'
+    '@' => HEAD
   }
   COMMIT = 'commit'
   InvalidObject = Class.new(StandardError)

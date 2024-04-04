@@ -72,7 +72,7 @@ module Command
     def show_patch(commit)
       return unless @options[:patch]
 
-      diff = repo.database.tree_diff(commit.parent, commit.oid)
+      diff = @rev_list.tree_diff(commit.parent, commit.oid)
       paths = diff.keys.sort_by(&:to_s)
       blank_line
       paths.each do |path|
@@ -93,7 +93,7 @@ module Command
     def show_commit_medium(commit)
       author = commit.author
       blank_line
-      puts fmt(:yellow, "commit #{abbrev(commit.oid)}") + decorate(commit)
+      puts fmt(:yellow, "commit #{abbrev(commit)}") + decorate(commit)
       puts "Author: #{author.name} <#{author.email}>"
       puts "Date: #{author.readable_time}"
       blank_line

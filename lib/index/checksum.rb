@@ -3,6 +3,7 @@ require 'digest/sha1'
 class Index
   class Checksum
     EndOfFile = Class.new(StandardError)
+    Invalid = Class.new(StandardError)
     CHECKSUM_SIZE = 20
 
     def initialize(file)

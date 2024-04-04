@@ -33,6 +33,8 @@ module Command
       handle_invalid_object(revision, e)
     end
 
+    def define_options; end
+
     private
 
     DETACHED_HEAD_MESSAGE = <<~MSG

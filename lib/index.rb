@@ -155,6 +155,9 @@ class Index
       read_entries(reader, count)
       reader.verify_checksum
     end
+  rescue Checksum::Invalid, Checksum::EndOfFile
+    release_lock
+    raise
   ensure
     file&.close
   end

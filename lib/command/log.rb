@@ -61,7 +61,6 @@ module Command
     end
 
     def show_commit(commit)
-      puts "@options[:format] = #{@options[:format]}"
       case @options[:format]
       when 'medium' then show_commit_medium(commit)
       when 'oneline' then show_commit_oneline(commit)

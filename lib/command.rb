@@ -4,6 +4,7 @@ require_relative './command/checkout'
 require_relative './command/commit'
 require_relative './command/diff'
 require_relative './command/init'
+require_relative './command/log'
 require_relative './command/status'
 
 module Command
@@ -15,6 +16,7 @@ module Command
     'checkout' => Checkout,
     'commit' => Commit,
     'diff' => Diff,
+    'log' => Log,
     'status' => Status
   }
 

@@ -1,7 +1,7 @@
 class Database
   class Commit
     attr_accessor :oid
-    attr_reader :parent, :tree
+    attr_reader :parent, :tree, :message, :author
 
     def initialize(parent, tree, author, message)
       @parent = parent

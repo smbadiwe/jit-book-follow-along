@@ -29,6 +29,10 @@ class Refs
     def head?
       path == HEAD
     end
+
+    def short_name
+      refs.short_name(path)
+    end
   end
 
   Ref = Struct.new(:oid) do
@@ -38,6 +42,32 @@ class Refs
   end
 
   SYMREF = /^ref: (.+)$/
+
+  def delete_branch(branch_name)
+    path = @heads_path.join(branch_name)
+    lockfile = Lockfile.new(path)
+    lockfile.hold_for_update
+    oid = read_symref(path)
+    raise InvalidBranch, "branch '#{branch_name}' not found." unless oid
+
+    File.unlink(path)
+    delete_parent_directories(path)
+    oid
+  ensure
+    lockfile.rollback
+  end
+
+  def delete_parent_directories(path)
+    path.dirname.ascend do |dir|
+      break if dir == @heads_path
+
+      begin
+        Dir.rmdir(dir)
+      rescue Errno::ENOTEMPTY
+        break
+      end
+    end
+  end
 
   def read_oid_or_symref(path)
     data = File.read(path).strip
@@ -72,6 +102,19 @@ class Refs
     path ? read_symref(path) : nil
   end
 
+  def reverse_refs
+    table = Hash.new { |hash, key| hash[key] = [] }
+    list_all_refs.each do |ref|
+      oid = ref.read_oid
+      table[oid].push(ref) if oid
+    end
+    table
+  end
+
+  def list_all_refs
+    [SymRef.new(self, HEAD)] + list_refs(@refs_path)
+  end
+
   def create_branch(branch_name, start_oid)
     path = @heads_path.join(branch_name)
     raise InvalidBranch, "'#{branch_name}' is not a valid branch name." if INVALID_NAME =~ branch_name
@@ -97,6 +140,18 @@ class Refs
     else
       update_ref_file(head_path, oid)
     end
+  end
+
+  def list_branches
+    list_refs(@heads_path)
+  end
+
+  def short_name(path)
+    path = @pathname.join(path)
+    prefix = [@heads_path, @pathname].find do |dir|
+      path.dirname.ascend.any? { |parent| parent == dir }
+    end
+    path.relative_path_from(prefix).to_s
   end
 
   private
@@ -136,11 +191,19 @@ class Refs
     prefix ? prefix.join(name) : nil
   end
 
-  # def read_ref_file(path)
-  #   File.read(path).strip
-  # rescue Errno::ENOENT
-  #   nil
-  # end
+  def list_refs(dirname)
+    names = Dir.entries(dirname) - ['.', '..']
+    names.map { |name| dirname.join(name) }.flat_map do |path|
+      if File.directory?(path)
+        list_refs(path)
+      else
+        path = path.relative_path_from(@pathname)
+        SymRef.new(self, path.to_s)
+      end
+    end
+  rescue Errno::ENOENT
+    []
+  end
 
   def head_path
     @pathname.join(HEAD)

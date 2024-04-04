@@ -5,25 +5,54 @@ module Command
     include WriteCommit
 
     def run
-      head_oid = repo.refs.read_head
-      revision = Revision.new(repo, @args[0])
-      merge_oid = revision.resolve(Revision::COMMIT)
+      @inputs = ::Merge::Inputs.new(repo, Revision::HEAD, @args[0])
+      handle_merged_ancestor if @inputs.already_merged?
+      handle_fast_forward if @inputs.fast_forward?
 
-      common = ::Merge::Bases.new(repo.database, head_oid, merge_oid)
-      base_oid = common.find.first
+      resolve_merge
+      commit_merge
+      exit 0
+    end
+
+    private
+
+    def handle_fast_forward
+      a = repo.database.short_oid(@inputs.left_oid)
+      b = repo.database.short_oid(@inputs.right_oid)
+
+      puts "Updating #{a}..#{b}"
+      puts 'Fast-forward'
 
       repo.index.load_for_update
 
-      tree_diff = repo.database.tree_diff(base_oid, merge_oid)
-      migration = repo.migration(tree_diff)
-      migration.apply_changes
+      tree_diff = repo.database.tree_diff(@inputs.left_oid, @inputs.right_oid)
+      repo.migration(tree_diff).apply_changes
 
       repo.index.write_updates
-
-      message = @stdin.read
-      write_commit([head_oid, merge_oid], message)
+      repo.refs.update_head(@inputs.right_oid)
 
       exit 0
+    end
+
+    def handle_merged_ancestor
+      puts 'Already up to date.'
+      exit 0
+    end
+
+    def resolve_merge
+      repo.index.load_for_update
+
+      merge = ::Merge::Resolve.new(repo, @inputs)
+      merge.execute
+
+      repo.index.write_updates
+      exit 1 if repo.index.conflict?
+    end
+
+    def commit_merge
+      parents = [@inputs.left_oid, @inputs.right_oid]
+      message = @stdin.read
+      write_commit(parents, message)
     end
   end
 end

@@ -28,8 +28,8 @@ class Index
     @changed = false
   end
 
-  def entry_for_path(path)
-    @entries[path.to_s]
+  def entry_for_path(path, stage = 0)
+    @entries[[path.to_s, stage]]
   end
 
   def update_entry_stat(entry, stat)
@@ -70,6 +70,21 @@ class Index
     @changed = true
   end
 
+  def conflict?
+    @entries.any? { |_key, entry| entry.stage > 0 }
+  end
+
+  def add_conflict_set(pathname, items)
+    remove_entry_with_stage(pathname, 0)
+    items.each_with_index do |item, n|
+      next unless item
+
+      entry = Entry.create_from_db(pathname, item, n + 1)
+      store_entry(entry)
+    end
+    @changed = true
+  end
+
   def remove(pathname)
     remove_entry(pathname)
     remove_children(pathname.to_s)
@@ -82,7 +97,11 @@ class Index
   end
 
   def remove_entry(pathname)
-    entry = @entries[pathname.to_s]
+    (0..3).each { |stage| remove_entry_with_stage(pathname, stage) }
+  end
+
+  def remove_entry_with_stage(pathname, stage)
+    entry = @entries[[pathname.to_s, stage]]
     return unless entry
 
     @keys.delete(entry.key)
@@ -164,7 +183,7 @@ class Index
   end
 
   def tracked_file?(path)
-    @entries.has_key?(path.to_s)
+    (0..3).any? { |stage| @entries.has_key?([path.to_s, stage]) }
   end
 
   def tracked?(path)

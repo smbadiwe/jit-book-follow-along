@@ -8,6 +8,11 @@ class Workspace
     @pathname = pathname
   end
 
+  def write_file(path, data)
+    flags = File::WRONLY | File::CREAT | File::TRUNC
+    File.open(@pathname.join(path), flags) { |f| f.write(data) }
+  end
+
   def list_files(path = @pathname)
     relative = path.relative_path_from(@pathname)
     if File.directory?(path)
@@ -47,7 +52,7 @@ class Workspace
   def stat_file?(path)
     stat_file(path)
     true
-  rescue
+  rescue StandardError
     false
   end
 
@@ -84,4 +89,3 @@ class Workspace
     Dir.mkdir(path) unless stat&.directory?
   end
 end
-

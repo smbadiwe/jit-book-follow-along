@@ -6,6 +6,7 @@ class Repository
                 :stats,
                 :head_tree,
                 :index_changes,
+                :conflicts,
                 :workspace_changes,
                 :untracked_files
 
@@ -15,6 +16,7 @@ class Repository
       @stats = {}
       @changed = SortedSet.new
       @index_changes = SortedHash.new
+      @conflicts = SortedHash.new
       @workspace_changes = SortedHash.new
       @untracked_files = SortedSet.new
       scan_workspace
@@ -50,8 +52,14 @@ class Repository
 
     def check_index_entries
       @repo.index.each_entry do |entry|
-        check_index_against_workspace(entry)
-        check_index_against_head_tree(entry)
+        if entry.stage == 0
+          check_index_against_workspace(entry)
+          check_index_against_head_tree(entry)
+        else
+          @changed.add(entry.path)
+          @conflicts[entry.path] ||= []
+          @conflicts[entry.path].push(entry.stage)
+        end
       end
     end
 

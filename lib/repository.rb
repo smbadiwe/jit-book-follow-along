@@ -1,6 +1,7 @@
 require_relative './database'
 require_relative './index'
 require_relative './refs'
+require_relative './repository/pending_commit'
 require_relative './repository/status'
 require_relative './workspace'
 
@@ -33,6 +34,10 @@ class Repository
 
   def migration(tree_diff)
     Migration.new(self, tree_diff)
+  end
+
+  def pending_commit
+    PendingCommit.new(@git_path)
   end
 
   def trackable_file?(path, stat)

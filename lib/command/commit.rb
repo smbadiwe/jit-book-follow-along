@@ -12,11 +12,15 @@ module Command
 
     def run
       repo.index.load
+      resume_merge if pending_commit.in_progress?
+
       parent = repo.refs.read_head
       message = @stdin.read
       commit = write_commit([*parent], message)
+
       is_root = parent.nil? ? '(root-commit) ' : ''
       puts "[#{is_root}#{commit.oid}] #{message.lines.first}"
+
       exit 0
     end
   end

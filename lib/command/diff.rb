@@ -20,20 +20,17 @@ module Command
     end
 
     def define_options
-      @parser.on '--cached', '--staged' do
-        @options[:cached] = true
-      end
-    end
-
-    private
-
-    def define_options
       @options[:patch] = true
       define_print_diff_options
       @parser.on '--cached', '--staged' do
         @options[:cached] = true
       end
+      @parser.on('-1', '--base') { @options[:stage] = 1 }
+      @parser.on('-2', '--ours') { @options[:stage] = 2 }
+      @parser.on('-3', '--theirs') { @options[:stage] = 3 }
     end
+
+    private
 
     def diff_head_index
       return unless @options[:patch]
@@ -49,12 +46,29 @@ module Command
 
     def diff_index_workspace
       return unless @options[:patch]
-      
-      @status.workspace_changes.each do |path, state|
-        case state
-        when :modified then print_diff(from_index(path), from_file(path))
-        when :deleted then print_diff(from_index(path), from_nothing(path))
+
+      paths = @status.conflicts.keys + @status.workspace_changes.keys
+      paths.sort.each do |path|
+        if @status.conflicts.has_key?(path)
+          print_conflict_diff(path)
+        else
+          print_workspace_diff(path)
         end
+      end
+    end
+
+    def print_conflict_diff(path)
+      puts "* Unmerged path #{path}"
+      target = from_index(path, @options[:stage])
+      return unless target
+
+      print_diff(target, from_file(path))
+    end
+
+    def print_workspace_diff(path)
+      case @status.workspace_changes[path]
+      when :modified then print_diff(from_index(path), from_file(path))
+      when :deleted then print_diff(from_index(path), from_nothing(path))
       end
     end
 
@@ -85,8 +99,10 @@ module Command
       Target.new(path, entry.oid, entry.mode.to_s(8), blob.data)
     end
 
-    def from_index(path)
-      entry = repo.index.entry_for_path(path)
+    def from_index(path, stage = 0)
+      entry = repo.index.entry_for_path(path, stage)
+      return nil unless entry
+
       blob = repo.database.load(entry.oid)
       Target.new(path, entry.oid, entry.mode.to_s(8), blob.data)
     end

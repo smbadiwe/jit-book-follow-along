@@ -109,7 +109,7 @@ module Command
         CONFLICT_SHORT_STATUS[@status.conflicts[path]]
       else
         left = SHORT_STATUS.fetch(@status.index_changes[path], ' ')
-        right = SHORT_STATUS.fetch(@status.workspace_changes[path], ' ')
+        right = SHORT_STATUS.fetch(@status.workspace_changes[path], '') # ' '
         left + right
       end
     end

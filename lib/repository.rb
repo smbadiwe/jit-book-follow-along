@@ -24,6 +24,10 @@ class Repository
     @refs ||= Refs.new(@git_path)
   end
 
+  def current_branch
+    @refs.current_ref().short_name
+  end
+
   def workspace
     @workspace ||= Workspace.new(@git_path.dirname)
   end

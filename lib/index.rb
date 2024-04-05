@@ -194,4 +194,12 @@ class Index
   def tracked?(path)
     tracked_file?(path) or @parents.has_key?(path.to_s)
   end
+
+  def child_paths(path)
+    @parents[path.to_s].to_a
+  end
+
+  def tracked_directory?(path)
+    @parents.has_key?(path.to_s)
+  end
 end

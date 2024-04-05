@@ -88,4 +88,10 @@ class Workspace
     File.unlink(path) if stat&.file?
     Dir.mkdir(path) unless stat&.directory?
   end
+
+  def remove(path)
+    File.unlink(@pathname.join(path))
+    path.dirname.ascend { |dirname| remove_directory(dirname) }
+  rescue Errno::ENOENT
+  end
 end

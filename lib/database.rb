@@ -65,6 +65,16 @@ class Database
     diff.changes
   end
 
+  def load_tree_entry(oid, pathname)
+    commit = load(oid)
+    root = Database::Entry.new(commit.tree, Tree::TREE_MODE)
+    return root unless pathname
+
+    pathname.each_filename.reduce(root) do |entry, name|
+      entry ? load(entry.oid).entries[name] : nil
+    end
+  end
+
   private
 
   def hash_content(content)

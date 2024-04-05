@@ -61,10 +61,12 @@ module Command
 
     def print_long_format
       print_branch_status
+
       print_changes('Changes to be committed', @status.index_changes, :green)
       print_changes('Unmerged paths', @status.conflicts, :red, :conflict)
       print_changes('Changes not staged for commit', @status.workspace_changes, :red)
       print_changes('Untracked files', @status.untracked_files, :red)
+
       print_commit_status
     end
 
@@ -90,6 +92,10 @@ module Command
       @status.untracked_files.each do |path|
         puts "?? #{path}"
       end
+    end
+
+    def print_branch_status
+      puts "On branch #{repo.current_branch}"
     end
 
     def print_commit_status

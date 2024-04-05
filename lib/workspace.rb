@@ -1,18 +1,35 @@
 class Workspace
   IGNORE = ['.', '..', '.git', '.vscode', '../.git', '../.vscode']
+  # IGNORE = ['.', '..']  #, '.git', '.vscode', '../.git', '../.vscode']
 
   MissingFile = Class.new(StandardError)
   NoPermission = Class.new(StandardError)
 
   def initialize(pathname)
     @pathname = pathname
-    puts get_ignored_paths
+    get_ignored_paths
   end
 
   def get_ignored_paths
-    read_file('.gitignore').lines.map { |line| line.strip }
-  rescue
-    []
+    @ignored_paths = IGNORE
+  #   skipped = read_file('.gitignore').lines
+  #   puts "skipped: #{skipped}. @pathname: #{@pathname}"
+  #   skipped_clean = []
+  #   skipped.each do |line|
+  #     full_path = File.expand_path(line.strip, @pathname)
+  #     relative = Pathname.new(full_path).relative_path_from(@pathname)
+  #     puts "Line: #{line.strip}. (#{relative}) File to ignore: #{full_path}"
+  #     next unless File.exist?(full_path)
+  #     if File.directory?(full_path)
+  #       skipped_clean.push(relative.to_s + File::SEPARATOR)
+  #     else
+  #       skipped_clean.push(relative.to_s)
+  #     end
+  #   end
+  #   @ignored_paths = IGNORE + skipped_clean
+  # rescue
+  #   @ignored_paths = IGNORE
+  #   raise
   end
 
   def write_file(path, data, mode = nil, mkdir = false)
@@ -26,7 +43,7 @@ class Workspace
   def list_files(path = @pathname)
     relative = path.relative_path_from(@pathname)
     if File.directory?(path)
-      filenames = Dir.entries(path) - IGNORE
+      filenames = Dir.entries(path) - @ignored_paths
       filenames.flat_map { |name| list_files(path.join(name)) }
     elsif File.exist?(path)
       [relative]
@@ -38,7 +55,7 @@ class Workspace
   # Lists the directory specified by dirname and returns a hash with the relative path of each file as the key and its stats as the value.
   def list_dir(dirname)
     path = @pathname.join(dirname || '')
-    entries = Dir.entries(path) - IGNORE
+    entries = Dir.entries(path) - @ignored_paths
     stats = {}
     entries.each do |name|
       relative = path.join(name).relative_path_from(@pathname)

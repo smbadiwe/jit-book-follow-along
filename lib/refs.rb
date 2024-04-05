@@ -128,11 +128,6 @@ class Refs
     update_symref(head_path, oid)
   end
 
-  def read_ref(name)
-    path = path_for_name(name)
-    path ? read_symref(path) : nil
-  end
-
   def set_head(revision, oid)
     path = @heads_path.join(revision)
     if File.file?(path)

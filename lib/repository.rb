@@ -1,6 +1,7 @@
 require_relative './database'
 require_relative './index'
 require_relative './refs'
+require_relative './repository/hard_reset'
 require_relative './repository/pending_commit'
 require_relative './repository/status'
 require_relative './workspace'
@@ -25,15 +26,15 @@ class Repository
   end
 
   def current_branch
-    @refs.current_ref().short_name
+    @refs.current_ref.short_name
   end
 
   def workspace
     @workspace ||= Workspace.new(@git_path.dirname)
   end
 
-  def status
-    Status.new(self)
+  def status(commit_oid = nil)
+    Status.new(self, commit_oid)
   end
 
   def migration(tree_diff)
@@ -42,6 +43,10 @@ class Repository
 
   def pending_commit
     PendingCommit.new(@git_path)
+  end
+
+  def hard_reset(oid)
+    HardReset.new(self, oid).execute
   end
 
   def trackable_file?(path, stat)

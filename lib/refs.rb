@@ -19,6 +19,7 @@ class Refs
   | @\{
   | [\x00-\x20*:?\[\\^~\x7f]
   }x
+  ORIG_HEAD = 'ORIG_HEAD'
   HEAD = 'HEAD'
 
   SymRef = Struct.new(:refs, :path) do
@@ -154,6 +155,10 @@ class Refs
     path.relative_path_from(prefix).to_s
   end
 
+  def update_ref(name, oid)
+    update_ref_file(@pathname.join(name), oid)
+  end
+
   private
 
   def update_symref(path, oid)
@@ -161,8 +166,10 @@ class Refs
     lockfile.hold_for_update
 
     ref = read_oid_or_symref(path)
-    return write_lockfile(lockfile, oid) unless ref.is_a?(SymRef)
-
+    unless ref.is_a?(SymRef)
+      write_lockfile(lockfile, oid)
+      return ref&.oid
+    end
     begin
       update_symref(@pathname.join(ref.path), oid)
     ensure

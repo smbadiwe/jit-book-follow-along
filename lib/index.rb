@@ -21,11 +21,9 @@ class Index
     @pathname = pathname
   end
 
-  def clear
-    @entries = {}
-    @keys = SortedSet.new
-    @parents = Hash.new { |hash, key| hash[key] = Set.new }
-    @changed = false
+  def clear!
+    clear
+    @changed = true
   end
 
   def entry_for_path(path, stage = 0)
@@ -49,26 +47,17 @@ class Index
     @changed = false
   end
 
-  def begin_write
-    @digest = Digest::SHA1.new
-  end
-
-  def write(data)
-    @lockfile.write(data)
-    @digest.update(data)
-  end
-
-  def finish_write
-    @lockfile.write(@digest.digest)
-    @lockfile.commit
-  end
-
   def add(pathname, oid, stat)
     (1..3).each { |stage| remove_entry_with_stage(pathname, stage) }
 
     entry = Entry.create(pathname, oid, stat)
     discard_conflicts(entry)
     store_entry(entry)
+    @changed = true
+  end
+
+  def add_from_db(pathname, item)
+    store_entry(Entry.create_from_db(pathname, item, 0))
     @changed = true
   end
 
@@ -93,11 +82,6 @@ class Index
     @changed = true
   end
 
-  def discard_conflicts(entry)
-    entry.parent_directories.each { |parent| remove_entry(parent) }
-    remove_children(entry.path)
-  end
-
   def remove_entry(pathname)
     (0..3).each { |stage| remove_entry_with_stage(pathname, stage) }
   end
@@ -113,13 +97,6 @@ class Index
       @parents[dir].delete(entry.path)
       @parents.delete(dir) if @parents[dir].empty?
     end
-  end
-
-  def remove_children(path)
-    return unless @parents.has_key?(path)
-
-    children = @parents[path].clone
-    children.each { |child| remove_entry(child) }
   end
 
   def store_entry(entry)
@@ -170,15 +147,6 @@ class Index
     nil
   end
 
-  def read_header(reader)
-    data = reader.read(HEADER_SIZE)
-    signature, version, count = data.unpack(HEADER_FORMAT)
-    raise Invalid, "Signature: expected '#{SIGNATURE}' but found '#{signature}'" unless signature == SIGNATURE
-    raise Invalid, "Version: expected '#{VERSION}' but found '#{version}'" unless version == VERSION
-
-    count
-  end
-
   def read_entries(reader, count)
     count.times do
       entry = reader.read(ENTRY_MIN_SIZE)
@@ -202,4 +170,49 @@ class Index
   def tracked_directory?(path)
     @parents.has_key?(path.to_s)
   end
+
+  private
+
+  def clear
+    @entries = {}
+    @keys = SortedSet.new
+    @parents = Hash.new { |hash, key| hash[key] = Set.new }
+    @changed = false
+  end
+
+  def remove_children(path)
+    return unless @parents.has_key?(path)
+
+    children = @parents[path].clone
+    children.each { |child| remove_entry(child) }
+  end
+
+  def discard_conflicts(entry)
+    entry.parent_directories.each { |parent| remove_entry(parent) }
+    remove_children(entry.path)
+  end
+
+  def read_header(reader)
+    data = reader.read(HEADER_SIZE)
+    signature, version, count = data.unpack(HEADER_FORMAT)
+    raise Invalid, "Signature: expected '#{SIGNATURE}' but found '#{signature}'" unless signature == SIGNATURE
+    raise Invalid, "Version: expected '#{VERSION}' but found '#{version}'" unless version == VERSION
+
+    count
+  end
+
+  # def begin_write
+  #   @digest = Digest::SHA1.new
+  # end
+
+  # def write(data)
+  #   @lockfile.write(data)
+  #   @digest.update(data)
+  # end
+
+  # def finish_write
+  #   @lockfile.write(@digest.digest)
+  #   @lockfile.commit
+  # end
+
 end

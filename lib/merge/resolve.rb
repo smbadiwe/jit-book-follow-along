@@ -144,25 +144,31 @@ module Merge
       result = merge3(base_oid, left_oid, right_oid)
       return result if result
 
-      blob = Database::Blob.new(merged_data(left_oid, right_oid))
+      oids = [base_oid, left_oid, right_oid]
+      blobs = oids.map { |oid| oid ? @repo.database.load(oid).data : '' }
+      merge = Diff3.merge(*blobs)
+
+      data = merge.to_s(@inputs.left_name, @inputs.right_name)
+      blob = Database::Blob.new(data)
       @repo.database.store(blob)
-      [false, blob.oid]
+
+      [merge.clean?, blob.oid]
     end
 
     def merge_modes(base_mode, left_mode, right_mode)
       merge3(base_mode, left_mode, right_mode) || [false, left_mode]
     end
 
-    def merged_data(left_oid, right_oid)
-      left_blob = @repo.database.load(left_oid)
-      right_blob = @repo.database.load(right_oid)
-      [
-        "<<<<<<< #{@inputs.left_name}\n",
-        left_blob.data,
-        "=======\n",
-        right_blob.data,
-        ">>>>>>> #{@inputs.right_name}\n"
-      ].join('')
-    end
+    # def merged_data(left_oid, right_oid)
+    #   left_blob = @repo.database.load(left_oid)
+    #   right_blob = @repo.database.load(right_oid)
+    #   [
+    #     "<<<<<<< #{@inputs.left_name}\n",
+    #     left_blob.data,
+    #     "=======\n",
+    #     right_blob.data,
+    #     ">>>>>>> #{@inputs.right_name}\n"
+    #   ].join('')
+    # end
   end
 end

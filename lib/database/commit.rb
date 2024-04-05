@@ -22,6 +22,10 @@ class Database
       @parents.first
     end
 
+    def merge?
+      @parents.size > 1
+    end
+
     def self.parse(scanner)
       headers = Hash.new { |hash, key| hash[key] = [] }
       loop do

@@ -1,3 +1,4 @@
+require_relative './diff/combined'
 require_relative './diff/hunk'
 require_relative './diff/myers'
 
@@ -8,6 +9,10 @@ module Diff
     del: '-'
   }
   Edit = Struct.new(:type, :a_line, :b_line) do
+    def a_lines
+      [a_line]
+    end
+
     def to_s
       line = a_line || b_line
       SYMBOLS.fetch(type) + line.text
@@ -19,6 +24,15 @@ module Diff
   def self.lines(document)
     document = document.lines if document.is_a?(String)
     document.map.with_index { |text, i| Line.new(i + 1, text) }
+  end
+
+  def self.combined(as, b)
+    diffs = as.map { |a| Diff.diff(a, b) }
+    Combined.new(diffs).to_a
+  end
+
+  def self.combined_hunks(as, b)
+    Hunk.filter(Diff.combined(as, b))
   end
 
   def self.diff(a, b)

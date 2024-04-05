@@ -19,6 +19,7 @@
 
 ### git log
 
+The `--cc` flag in `git log` stands for "combined" view.
 
 ### git merge
 
@@ -32,3 +33,5 @@
 - Turn recursion to loop using queue / stack
 - Tree trasversal
 - Trie
+- [Operational Transforms](https://en.wikipedia.org/wiki/Operational_transformation)
+- [diff3](https://www.cis.upenn.edu/~bcpierce/papers/diff3-short.pdf)

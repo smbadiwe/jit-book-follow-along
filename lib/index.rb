@@ -171,6 +171,12 @@ class Index
     @parents.has_key?(path.to_s)
   end
 
+  def conflict_paths
+    paths = Set.new
+    each_entry { |entry| paths.add(entry.path) unless entry.stage == 0 }
+    paths
+  end
+
   private
 
   def clear
@@ -214,5 +220,4 @@ class Index
   #   @lockfile.write(@digest.digest)
   #   @lockfile.commit
   # end
-
 end

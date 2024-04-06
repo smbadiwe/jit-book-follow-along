@@ -15,14 +15,15 @@ module Command
       handle_merged_ancestor if @inputs.already_merged?
       handle_fast_forward if @inputs.fast_forward?
 
-      pending_commit.start(@inputs.right_oid, @stdin.read)
-
+      pending_commit.start(@inputs.right_oid)
       resolve_merge
       commit_merge
+
       exit 0
     end
 
     def define_options
+      define_write_commit_options
       @options[:mode] = :run
 
       @parser.on('--abort') { @options[:mode] = :abort }
@@ -90,20 +91,47 @@ module Command
       merge.execute
 
       repo.index.write_updates
+      fail_on_conflict if repo.index.conflict?
+    end
 
-      return unless repo.index.conflict?
-
+    def fail_on_conflict
+      edit_file(pending_commit.message_path) do |editor|
+        editor.puts(read_message || default_commit_message)
+        editor.puts('')
+        editor.note('Conflicts:')
+        repo.index.conflict_paths.each { |name| editor.note("\t#{name}") }
+        editor.close
+      end
       puts 'Automatic merge failed; fix conflicts and then commit the result.'
       exit 1
     end
 
+    def default_commit_message
+      "Merge commit '#{@inputs.right_name}'"
+    end
+
     def commit_merge
       parents = [@inputs.left_oid, @inputs.right_oid]
-      message = pending_commit.merge_message
+      message = compose_message
 
       write_commit(parents, message)
-
       pending_commit.clear
+    end
+
+    COMMIT_NOTES = <<~MSG
+      Please enter a commit message to explain why this merge is necessary,
+      especially if it merges an updated upstream into a topic branch.
+      Lines starting with '#' will be ignored, and an empty message aborts
+      the commit.
+    MSG
+    
+    def compose_message
+      edit_file(pending_commit.message_path) do |editor|
+        editor.puts(read_message || default_commit_message)
+        editor.puts('')
+        editor.note(COMMIT_NOTES)
+        editor.close unless @options[:edit]
+      end
     end
   end
 end

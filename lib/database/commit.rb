@@ -1,12 +1,13 @@
 class Database
   class Commit
     attr_accessor :oid
-    attr_reader :parents, :tree, :message, :author
+    attr_reader :parents, :tree, :message, :author, :committer
 
-    def initialize(parents, tree, author, message)
+    def initialize(parents, tree, author, committer, message)
       @parents = parents
       @tree = tree
       @author = author
+      @committer = committer
       @message = message
     end
 
@@ -15,7 +16,7 @@ class Database
     end
 
     def date
-      @author.time
+      @committer.time
     end
 
     def parent
@@ -39,6 +40,7 @@ class Database
         headers['parent'],
         headers['tree'].first,
         Author.parse(headers['author'].first),
+        Author.parse(headers['committer'].first),
         scanner.rest
       )
     end
@@ -53,7 +55,7 @@ class Database
       lines.push("tree #{@tree}")
       lines.concat(@parents.map { |oid| "parent #{oid}" })
       lines.push("author #{@author}")
-      lines.push("committer #{@author}")
+      lines.push("committer #{@committer}")
       lines.push('')
       lines.push(@message)
 

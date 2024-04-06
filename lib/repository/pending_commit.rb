@@ -2,15 +2,16 @@ class Repository
   class PendingCommit
     Error = Class.new(StandardError)
 
+    attr_reader :message_path
+
     def initialize(pathname)
       @head_path = pathname.join('MERGE_HEAD')
       @message_path = pathname.join('MERGE_MSG')
     end
 
-    def start(oid, message)
+    def start(oid)
       flags = File::WRONLY | File::CREAT | File::EXCL
       File.open(@head_path, flags) { |f| f.puts(oid) }
-      File.open(@message_path, flags) { |f| f.write(message) }
     end
 
     def clear(_type = :merge)

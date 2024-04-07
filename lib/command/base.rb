@@ -55,6 +55,9 @@ module Command
     def parse_options
       @options = {}
       @parser = OptionParser.new
+      @parser.banner = "Usage: jit #{ARGV.first} [options]"
+      @parser.separator ""
+      @parser.separator "Specific options:"
       define_options
       @parser.parse!(@args)
     end

@@ -12,15 +12,12 @@ module Command
       and try again.
     MSG
 
-    def resume_merge
-      handle_conflicted_index
-
-      parents = [repo.refs.read_head, pending_commit.merge_oid]
-      message = compose_merge_message(MERGE_NOTES)
-
-      write_commit(parents, message)
-      pending_commit.clear
-
+    def resume_merge(type)
+      case type
+      when :merge then write_merge_commit
+      when :cherry_pick then write_cherry_pick_commit
+      when :revert then write_revert_commit
+      end
       exit 0
     end
 
@@ -112,6 +109,16 @@ module Command
       \t.git/CHERRY_PICK_HEAD
       and try again.
     MSG
+  
+    def write_revert_commit
+      handle_conflicted_index
+
+      parents = [repo.refs.read_head]
+      message = compose_merge_message
+      
+      write_commit(parents, message)
+      pending_commit.clear(:revert)
+    end
 
     def write_cherry_pick_commit
       handle_conflicted_index

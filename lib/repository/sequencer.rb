@@ -19,7 +19,11 @@ class Repository
     end
 
     def pick(commit)
-      @commands.push(commit)
+      @commands.push([:pick, commit])
+    end
+
+    def revert(commit)
+      @commands.push([:revert, commit])
     end
 
     def next_command
@@ -46,25 +50,15 @@ class Repository
       lockfile.commit
     end
 
-    def dump
-      return unless @todo_file
-
-      @commands.each do |commit|
-        short = @repo.database.short_oid(commit.oid)
-        @todo_file.write("pick #{short} #{commit.title_line}")
-      end
-      @todo_file.commit
-    end
-    
     UNSAFE_MESSAGE = 'You seem to have moved HEAD. Not rewinding, check your HEAD!'
-    
+
     def abort
       head_oid = File.read(@head_path).strip
       expected = File.read(@abort_path).strip
       actual = @repo.refs.read_head
 
       quit
-      
+
       raise UNSAFE_MESSAGE unless actual == expected
 
       @repo.hard_reset(head_oid)
@@ -72,14 +66,25 @@ class Repository
       @repo.refs.update_ref(Refs::ORIG_HEAD, orig_head)
     end
 
+    def dump
+      return unless @todo_file
+
+      @commands.each do |action, commit|
+        short = @repo.database.short_oid(commit.oid)
+        @todo_file.write("#{action} #{short} #{commit.title_line}")
+      end
+      @todo_file.commit
+    end
+
     def load
       open_todo_file
       return unless File.file?(@todo_path)
 
       @commands = File.read(@todo_path).lines.map do |line|
-        oid, = /^pick (\S+) (.*)$/.match(line).captures
+        action, oid, = /^(\S+) (\S+) (.*)$/.match(line).captures
         oids = @repo.database.prefix_match(oid)
-        @repo.database.load(oids.first)
+        commit = @repo.database.load(oids.first)
+        [action.to_sym, commit]
       end
     end
 

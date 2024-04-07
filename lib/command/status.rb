@@ -61,6 +61,7 @@ module Command
 
     def print_long_format
       print_branch_status
+      print_pending_commit_status
 
       print_changes('Changes to be committed', @status.index_changes, :green)
       print_changes('Unmerged paths', @status.conflicts, :red, :conflict)
@@ -68,6 +69,43 @@ module Command
       print_changes('Untracked files', @status.untracked_files, :red)
 
       print_commit_status
+    end
+
+    def print_pending_commit_status
+      case repo.pending_commit.merge_type
+      when :merge
+        if @status.conflicts.empty?
+          puts 'All conflicts fixed but you are still merging.'
+          hint "use 'jit commit' to conclude merge"
+        else
+          puts 'You have unmerged paths.'
+          hint "fix conflicts and run 'jit commit'"
+          hint "use 'jit merge --abort' to abort the merge"
+        end
+        puts ''
+      when :cherry_pick
+        print_pending_type(:cherry_pick)
+      when :revert
+        print_pending_type(:revert)
+      end
+    end
+
+    def print_pending_type(merge_type)
+      oid = repo.pending_commit.merge_oid(merge_type)
+      short = repo.database.short_oid(oid)
+      op = merge_type.to_s.sub('_', '-')
+      puts "You are currently #{op}ing commit #{short}."
+      if @status.conflicts.empty?
+        hint "all conflicts fixed: run 'jit #{op} --continue'"
+      else
+        hint "fix conflicts and run 'jit #{op} --continue'"
+      end
+      hint "use 'jit #{op} --abort' to cancel the #{op} operation"
+      puts ''
+    end
+
+    def hint(message)
+      puts " (#{message})"
     end
 
     def print_changes(message, changeset, style, label_set = :normal)

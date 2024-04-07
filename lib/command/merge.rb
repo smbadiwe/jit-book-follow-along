@@ -47,7 +47,7 @@ module Command
 
     def handle_continue
       repo.index.load
-      resume_merge
+      resume_merge(:merge)
     rescue Repository::PendingCommit::Error => e
       @stderr.puts "fatal: #{e.message}"
       exit 128
@@ -124,7 +124,7 @@ module Command
       Lines starting with '#' will be ignored, and an empty message aborts
       the commit.
     MSG
-    
+
     def compose_message
       edit_file(pending_commit.message_path) do |editor|
         editor.puts(read_message || default_commit_message)

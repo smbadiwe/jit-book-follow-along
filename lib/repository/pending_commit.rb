@@ -4,33 +4,49 @@ class Repository
 
     attr_reader :message_path
 
+    HEAD_FILES = {
+      merge: 'MERGE_HEAD',
+      cherry_pick: 'CHERRY_PICK_HEAD'
+    }
+
     def initialize(pathname)
-      @head_path = pathname.join('MERGE_HEAD')
+      @pathname = pathname
       @message_path = pathname.join('MERGE_MSG')
     end
 
-    def start(oid)
+    def start(oid, type = :merge)
+      path = @pathname.join(HEAD_FILES.fetch(type))
       flags = File::WRONLY | File::CREAT | File::EXCL
-      File.open(@head_path, flags) { |f| f.puts(oid) }
+      File.open(path, flags) { |f| f.puts(oid) }
     end
 
-    def clear(_type = :merge)
-      File.unlink(@head_path)
-      File.unlink(@message_path)
-    rescue Errno::ENOENT
-      name = @head_path.basename
-      raise Error, "There is no merge to abort (#{name} missing)."
+    def merge_type
+      HEAD_FILES.each do |type, name|
+        path = @pathname.join(name)
+        return type if File.file?(path)
+      end
+      nil
     end
 
     def in_progress?
-      File.file?(@head_path)
+      merge_type != nil
     end
 
-    def merge_oid
-      File.read(@head_path).strip
+    def merge_oid(type = :merge)
+      head_path = @pathname.join(HEAD_FILES.fetch(type))
+      File.read(head_path).strip
     rescue Errno::ENOENT
-      name = @head_path.basename
+      name = head_path.basename
       raise Error, "There is no merge in progress (#{name} missing)."
+    end
+
+    def clear(type = :merge)
+      head_path = @pathname.join(HEAD_FILES.fetch(type))
+      File.unlink(head_path)
+      File.unlink(@message_path)
+    rescue Errno::ENOENT
+      name = head_path.basename
+      raise Error, "There is no merge to abort (#{name} missing)."
     end
 
     def merge_message

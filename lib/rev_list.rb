@@ -2,18 +2,23 @@ require_relative './path_filter'
 require_relative './revision'
 
 class RevList
-  def initialize(repo, revs)
+  include Enumerable
+
+  def initialize(repo, revs, options = {})
     @repo = repo
-    @commits = {}
     @flags = Hash.new { |hash, oid| hash[oid] = Set.new }
+    @filter = PathFilter.build(@prune)
     @limited = false
+
     @output = []
     @queue = []
     @prune = []
     @diffs = {}
+    @commits = {}
+
+    @walk = options.fetch(:walk, true)
     revs.each { |rev| handle_revision(rev) }
     handle_revision(Revision::HEAD) if @queue.empty?
-    @filter = PathFilter.build(@prune)
   end
 
   def each(&block)
@@ -57,9 +62,11 @@ class RevList
       # RANGE supports syntax like jit log topic...master
       set_start_point(match[1], false)
       set_start_point(match[2], true)
+      @walk = true
     elsif match = EXCLUDE.match(rev)
       # EXCLUDE supports syntax like jit log ^topic
       set_start_point(match[1], false)
+      @walk = true
     else
       set_start_point(rev, true)
     end
@@ -105,8 +112,12 @@ class RevList
   def enqueue_commit(commit)
     return unless mark(commit.oid, :seen)
 
-    index = @queue.find_index { |c| c.date < commit.date }
-    @queue.insert(index || @queue.size, commit)
+    if @walk
+      index = @queue.find_index { |c| c.date < commit.date }
+      @queue.insert(index || @queue.size, commit)
+    else
+      @queue.push(commit)
+    end
   end
 
   def traverse_commits
@@ -122,7 +133,7 @@ class RevList
   end
 
   def add_parents(commit)
-    return unless mark(commit.oid, :added)
+    return unless @walk and mark(commit.oid, :added)
 
     if marked?(commit.oid, :uninteresting)
       parents = commit.parents.map { |oid| load_commit(oid) }

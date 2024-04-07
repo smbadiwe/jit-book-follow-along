@@ -97,14 +97,46 @@ module Command
       @pending_commit ||= repo.pending_commit
     end
 
-    def resume_merge
+    def resume_merge(type)
+      case type
+      when :merge then write_merge_commit
+      when :cherry_pick then write_cherry_pick_commit
+      end
+
+      exit 0
+    end
+
+    CHERRY_PICK_NOTES = <<~MSG
+      It looks like you may be committing a cherry-pick.
+      If this is not correct, please remove the file
+      \t.git/CHERRY_PICK_HEAD
+      and try again.
+    MSG
+
+    def write_cherry_pick_commit
+      handle_conflicted_index
+
+      parents = [repo.refs.read_head]
+      message = compose_merge_message(CHERRY_PICK_NOTES)
+
+      pick_oid = pending_commit.merge_oid(:cherry_pick)
+      commit = repo.database.load(pick_oid)
+
+      picked = Database::Commit.new(parents, write_tree.oid,
+                                    commit.author, current_author,
+                                    message)
+
+      repo.database.store(picked)
+      repo.refs.update_head(picked.oid)
+      pending_commit.clear(:cherry_pick)
+    end
+
+    def write_merge_commit
       handle_conflicted_index
 
       parents = [repo.refs.read_head, pending_commit.merge_oid]
       write_commit(parents, pending_commit.merge_message)
-      pending_commit.clear
-
-      exit 0
+      pending_commit.clear(:merge)
     end
 
     def handle_conflicted_index

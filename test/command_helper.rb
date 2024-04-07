@@ -41,9 +41,9 @@ module CommandHelper
     @env[key] = value
   end
 
-  def set_stdin(string)
-    @stdin = StringIO.new(string)
-  end
+  # def set_stdin(string)
+  #   @stdin = StringIO.new(string)
+  # end
 
   def jit_cmd(*argv)
     @env ||= {}
@@ -56,8 +56,7 @@ module CommandHelper
   def commit(message)
     set_env('GIT_AUTHOR_NAME', 'A. U. Thor')
     set_env('GIT_AUTHOR_EMAIL', 'author@example.com')
-    set_stdin(message)
-    jit_cmd('commit')
+    jit_cmd('commit', '-m', message)
   end
 
   def make_unreadable(name)

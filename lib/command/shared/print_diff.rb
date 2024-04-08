@@ -10,6 +10,20 @@ module Command
 
     private
 
+    DIFF_FORMATS = {
+      context: :normal,
+      meta: :bold,
+      frag: :cyan,
+      old: :red,
+      new: :green
+    }
+
+    def diff_fmt(name, text)
+      key = ['color', 'diff', name]
+      style = repo.config.get(key)&.split(/ +/) || DIFF_FORMATS.fetch(name)
+      fmt(style, text)
+    end
+
     def define_print_diff_options
       @parser.on('-p', '-u', '--patch') { @options[:patch] = true }
       @parser.on('-s', '--no-patch') { @options[:patch] = false }
@@ -27,7 +41,7 @@ module Command
     end
 
     def header(string)
-      puts fmt(:bold, string)
+      puts diff_fmt(:meta, string)
     end
 
     def short(oid)
@@ -70,16 +84,16 @@ module Command
     end
 
     def print_diff_hunk(hunk)
-      puts fmt(:cyan, hunk.header)
+      puts diff_fmt(:frag, hunk.header)
       hunk.edits.each { |edit| print_diff_edit(edit) }
     end
 
     def print_diff_edit(edit)
       text = edit.to_s.rstrip
       case edit.type
-      when :eql then puts text
-      when :ins then puts fmt(:green, text)
-      when :del then puts fmt(:red, text)
+      when :eql then puts diff_fmt(:context, text)
+      when :ins then puts diff_fmt(:new, text)
+      when :del then puts diff_fmt(:old, text)
       end
     end
   end

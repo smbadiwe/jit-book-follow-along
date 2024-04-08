@@ -35,8 +35,11 @@ module Command
     end
 
     def current_author
-      name = @env.fetch('GIT_AUTHOR_NAME', 'Soma Mbadiwe')
-      email = @env.fetch('GIT_AUTHOR_EMAIL', 'somasystemsng@gmail.com')
+      config_name = repo.config.get('user.name')
+      config_email = repo.config.get('user.email')
+
+      name = @env.fetch('GIT_AUTHOR_NAME', config_name)
+      email = @env.fetch('GIT_AUTHOR_EMAIL', config_email)
       Database::Author.new(name, email, Time.now)
     end
 
@@ -109,13 +112,13 @@ module Command
       \t.git/CHERRY_PICK_HEAD
       and try again.
     MSG
-  
+
     def write_revert_commit
       handle_conflicted_index
 
       parents = [repo.refs.read_head]
       message = compose_merge_message
-      
+
       write_commit(parents, message)
       pending_commit.clear(:revert)
     end

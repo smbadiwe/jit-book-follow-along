@@ -7,7 +7,7 @@ module Command
       when :quit then handle_quit
       end
 
-      sequencer.start
+      sequencer.start(@options)
       store_commit_sequence
       resume_sequencer
     end
@@ -18,12 +18,35 @@ module Command
       @parser.on('--continue') { @options[:mode] = :continue }
       @parser.on('--abort') { @options[:mode] = :abort }
       @parser.on('--quit') { @options[:mode] = :quit }
+
+      @parser.on '-m <parent>', '--mainline=<parent>', Integer do |parent|
+        @options[:mainline] = parent
+      end
     end
 
     def sequencer
       @sequencer ||= Repository::Sequencer.new(repo)
     end
 
+    def select_parent(commit)
+      mainline = sequencer.get_option('mainline')
+      if commit.merge?
+        return commit.parents[mainline - 1] if mainline
+
+        @stderr.puts <<~ERROR
+          error: commit #{commit.oid} is a merge but no -m option was given
+        ERROR
+        exit 1
+      else
+        return commit.parent unless mainline
+
+        @stderr.puts <<~ERROR
+          error: mainline was specified but commit #{commit.oid} is not a merge
+        ERROR
+        exit 1
+      end
+    end
+    
     CONFLICT_NOTES = <<~MSG
       after resolving the conflicts, mark the corrected paths
       with 'jit add <paths>' or 'jit rm <paths>'
@@ -83,7 +106,7 @@ module Command
       when :cherry_pick then write_cherry_pick_commit
       when :revert then write_revert_commit
       end
-      
+
       sequencer.load
       sequencer.drop_command
       resume_sequencer

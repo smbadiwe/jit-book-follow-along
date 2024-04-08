@@ -56,8 +56,8 @@ module Command
       @options = {}
       @parser = OptionParser.new
       @parser.banner = "Usage: jit #{ARGV.first} [options]"
-      @parser.separator ""
-      @parser.separator "Specific options:"
+      @parser.separator ''
+      @parser.separator 'Specific options:'
       define_options
       @parser.parse!(@args)
     end
@@ -88,7 +88,10 @@ module Command
     end
 
     def editor_command
-      @env['GIT_EDITOR'] || @env['VISUAL'] || @env['EDITOR'] || Editor::DEFAULT_EDITOR
+      return @env['GIT_EDITOR'] if @env['GIT_EDITOR']
+
+      core_editor = repo.config.get('core.editor')
+      core_editor || @env['VISUAL'] || @env['EDITOR']
     end
   end
 end
